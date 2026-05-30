@@ -1,6 +1,6 @@
 # 🔍 Research Agent
 
-A full-stack **Agentic RAG** (Retrieval-Augmented Generation) application that autonomously researches any topic by combining your uploaded documents with live web search. It features a **human-in-the-loop** review step, **real-time token streaming**, and **multi-conversation chat history** — wrapped in a ChatGPT/Claude-style UI.
+A full-stack **Agentic RAG** (Retrieval-Augmented Generation) application that autonomously researches any topic by combining your uploaded documents with live web search. It features a **human-in-the-loop** review step, **real-time token streaming**, and **multi-conversation chat history**.
 
 ![Next.js](https://img.shields.io/badge/Next.js-Frontend-black?logo=next.js)
 ![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688?logo=fastapi)
