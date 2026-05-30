@@ -22,3 +22,6 @@ documents/
 
 # LangGraph SQLite checkpointer (conversation memory)
 checkpoints.sqlite*
+
+# Claude Code local settings
+.claude/
