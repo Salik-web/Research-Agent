@@ -1,14 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  FileText,
-  MessageSquare,
-  Plus,
-  Search,
-  Trash2,
-  X,
-} from "lucide-react";
+import { FileText, Plus, Trash2, X } from "lucide-react";
 import { listDocuments } from "@/lib/api";
 import type { Conversation } from "@/lib/types";
 
@@ -20,9 +13,7 @@ interface Props {
   onNewChat: () => void;
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
-  /** Locks list interactions while the agent is busy. */
   busy: boolean;
-  /** Bump to re-fetch the document list (e.g. after an upload). */
   refreshKey?: number;
 }
 
@@ -45,32 +36,30 @@ export default function Sidebar({
       .catch(() => setDocs([]));
   }, [refreshKey]);
 
-  // Most-recently updated first.
   const ordered = [...conversations].sort((a, b) => b.updatedAt - a.updatedAt);
 
   return (
     <>
-      {/* Mobile backdrop */}
       {open && (
         <div
-          className="fixed inset-0 z-20 bg-black/40 md:hidden"
+          className="fixed inset-0 z-20 bg-black/30 md:hidden"
           onClick={onClose}
           aria-hidden
         />
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-30 flex w-72 flex-col border-r border-surface-border bg-surface-sidebar transition-transform md:static md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-30 flex w-64 flex-col border-r border-surface-border bg-surface-sidebar transition-transform md:static md:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        {/* Header */}
+        {/* Wordmark (monogram, no magnifying glass) */}
         <div className="flex items-center justify-between px-4 py-4">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-accent-fg">
-              <Search size={16} />
-            </div>
-            <span className="font-semibold text-ink">Research Agent</span>
+            <span className="flex h-6 w-6 items-center justify-center rounded-md bg-accent text-xs font-semibold text-accent-fg">
+              R
+            </span>
+            <span className="text-sm font-medium text-ink">Research Agent</span>
           </div>
           <button
             onClick={onClose}
@@ -86,42 +75,39 @@ export default function Sidebar({
           <button
             onClick={onNewChat}
             disabled={busy}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-surface-border bg-surface-raised px-4 py-2.5 text-sm font-medium text-ink transition-colors hover:border-accent hover:bg-accent/10 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink-muted transition-colors hover:bg-accent/10 hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Plus size={16} />
-            New Chat
+            New chat
           </button>
         </div>
 
-        {/* Conversation list */}
-        <div className="mt-5 flex min-h-0 flex-1 flex-col px-3">
-          <h2 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-ink-muted">
+        {/* Conversations */}
+        <div className="mt-4 flex min-h-0 flex-1 flex-col px-3">
+          <h2 className="mb-1 px-3 text-xs font-medium uppercase tracking-wider text-ink-muted/70">
             Chats
           </h2>
           <div className="min-h-0 flex-1 overflow-y-auto">
             {ordered.length === 0 ? (
-              <p className="px-1 text-xs text-ink-muted/80">No chats yet.</p>
+              <p className="px-3 text-xs text-ink-muted/70">No chats yet.</p>
             ) : (
-              <ul className="space-y-1">
+              <ul className="space-y-0.5">
                 {ordered.map((c) => {
                   const isActive = c.id === activeId;
                   return (
                     <li key={c.id}>
                       <div
-                        className={`group flex items-center gap-2 rounded-lg px-2 py-2 text-sm transition-colors ${
+                        className={`group flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors ${
                           isActive
-                            ? "bg-accent/15 text-ink"
-                            : "text-ink-muted hover:bg-surface-raised hover:text-ink"
+                            ? "bg-accent/10 text-ink"
+                            : "text-ink-muted hover:bg-accent/5 hover:text-ink"
                         } ${busy ? "cursor-not-allowed" : "cursor-pointer"}`}
                         onClick={() => !busy && onSelect(c.id)}
                       >
-                        <MessageSquare
-                          size={15}
-                          className={`shrink-0 ${
-                            isActive ? "text-accent" : "text-ink-muted"
-                          }`}
-                        />
-                        <span className="flex-1 truncate" title={c.title || "New chat"}>
+                        <span
+                          className="flex-1 truncate"
+                          title={c.title || "New chat"}
+                        >
                           {c.title || "New chat"}
                         </span>
                         <button
@@ -131,7 +117,7 @@ export default function Sidebar({
                           }}
                           disabled={busy}
                           aria-label="Delete chat"
-                          className="shrink-0 text-ink-muted opacity-0 transition-opacity hover:text-accent group-hover:opacity-100 disabled:cursor-not-allowed"
+                          className="shrink-0 text-ink-muted/60 opacity-0 transition-opacity hover:text-accent group-hover:opacity-100 disabled:cursor-not-allowed"
                         >
                           <Trash2 size={14} />
                         </button>
@@ -145,23 +131,23 @@ export default function Sidebar({
         </div>
 
         {/* Knowledge base */}
-        <div className="flex max-h-48 flex-col border-t border-surface-border px-3 py-3">
-          <h2 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-ink-muted">
-            Knowledge Base
+        <div className="flex max-h-44 flex-col border-t border-surface-border px-3 py-3">
+          <h2 className="mb-1 px-3 text-xs font-medium uppercase tracking-wider text-ink-muted/70">
+            Documents
           </h2>
           <div className="min-h-0 flex-1 overflow-y-auto">
             {docs.length === 0 ? (
-              <p className="px-1 text-xs text-ink-muted/80">
-                No documents yet. Attach a PDF in the chat bar.
+              <p className="px-3 text-xs text-ink-muted/70">
+                Attach a PDF in the chat bar.
               </p>
             ) : (
-              <ul className="space-y-1">
+              <ul className="space-y-0.5">
                 {docs.map((d) => (
                   <li
                     key={d}
-                    className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-ink"
+                    className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-ink-muted"
                   >
-                    <FileText size={14} className="shrink-0 text-accent" />
+                    <FileText size={14} className="shrink-0 opacity-70" />
                     <span className="truncate" title={d}>
                       {d}
                     </span>
@@ -170,10 +156,6 @@ export default function Sidebar({
               </ul>
             )}
           </div>
-        </div>
-
-        <div className="border-t border-surface-border px-4 py-3 text-xs text-ink-muted/80">
-          Agentic RAG · LangGraph · Groq
         </div>
       </aside>
     </>
