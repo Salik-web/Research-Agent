@@ -216,3 +216,24 @@ def documents():
 @app.get("/api/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/api/debug-env")
+def debug_env():
+    """TEMPORARY: reports which key env vars the container sees (names only,
+    no values). Remove after diagnosing."""
+    expected = [
+        "GROQ_API_KEY",
+        "PINECONE_API_KEY",
+        "TAVILY_API_KEY",
+        "LANGCHAIN_API_KEY",
+        "LANGCHAIN_TRACING_V2",
+        "LANGCHAIN_PROJECT",
+    ]
+    present = {k: bool(os.getenv(k)) for k in expected}
+    keyish = sorted(
+        n
+        for n in os.environ
+        if any(s in n.upper() for s in ["PINECONE", "GROQ", "TAVILY", "LANGCHAIN", "LANGSMITH"])
+    )
+    return {"present": present, "keyish_names_found": keyish}
