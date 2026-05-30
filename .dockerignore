@@ -1,0 +1,10 @@
+.venv
+frontend
+node_modules
+__pycache__
+*.pyc
+.git
+checkpoints.sqlite*
+documents/*
+.env
+.env.*

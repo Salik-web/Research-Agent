@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(\"health: \" + \\(Invoke-RestMethod http://127.0.0.1:8000/api/health -TimeoutSec 5 | ConvertTo-Json -Compress\\); \"new-chat: \" + \\(Invoke-RestMethod -Method Post http://127.0.0.1:8000/api/new-chat -TimeoutSec 5 | ConvertTo-Json -Compress\\); \"documents: \" + \\(Invoke-RestMethod http://127.0.0.1:8000/api/documents -TimeoutSec 5 | ConvertTo-Json -Compress\\))",
+      "Bash(./.venv/Scripts/python.exe -m uvicorn backend.api:app --host 127.0.0.1 --port 8000)"
+    ]
+  }
+}
