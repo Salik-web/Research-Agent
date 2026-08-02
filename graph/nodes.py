@@ -16,23 +16,25 @@ load_dotenv()
 # streaming=True lets the backend stream report tokens via LangGraph's
 # stream_mode="messages" (real ChatGPT-style token streaming).
 llm = ChatGroq(
-    model="qwen/qwen3-32b",
+    model="openai/gpt-oss-120b",
     max_tokens=2048,
     temperature=0.3,
     streaming=True,
 )
 
 # A cheap "judge" client for yes/no decisions (evaluate_context, evaluate).
-# These nodes only need one word, so we cap the output budget to a couple of
-# tokens: with `/no_think` in the prompt Qwen3 skips its reasoning block and
-# emits the answer directly. temperature=0 keeps the verdict deterministic, and
-# no streaming avoids the per-chunk overhead. This shaves the reserved output
-# tokens per judge call from 2048 to ~4 against the 6000 TPM budget.
+# gpt-oss is a reasoning model: even with reasoning_effort="low" it emits a short
+# reasoning block before the answer, and if max_tokens is too small that block
+# eats the whole budget and the visible content comes back empty (finish=length),
+# which silently made every judge decide "no". A sweep showed max_tokens=16 still
+# truncates but 32 finishes cleanly ("yes"/"no", finish=stop) reliably; we use 48
+# (~50% margin) to absorb reasoning-length variance. temperature=0 keeps the
+# verdict deterministic. Still ~98% smaller reserved budget than the 2048 main llm.
 judge_llm = ChatGroq(
-    model="qwen/qwen3-32b",
-    max_tokens=4,
-    temperature=0.0,
-    streaming=False,
+    model="openai/gpt-oss-120b",
+    max_tokens=48,
+    temperature=0,
+    reasoning_effort="low",
 )
 
 # --- Groq call accounting ----------------------------------------------------
