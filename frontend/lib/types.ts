@@ -20,12 +20,14 @@ export interface Conversation {
 }
 
 /** Status returned by /api/chat and /api/resume. */
-export type AgentStatus = "pending_review" | "ready_to_stream";
+export type AgentStatus = "pending_review" | "ready_to_stream" | "rate_limited";
 
 export interface ChatResponse {
   status: AgentStatus;
   /** Present when status === "pending_review": the summarized findings so far. */
   findings?: string;
+  /** Present when status === "rate_limited": a human-readable explanation. */
+  message?: string;
 }
 
 export interface NewChatResponse {

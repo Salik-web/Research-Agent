@@ -1,0 +1,34 @@
+name: Keep Hugging Face Space awake
+
+# The backend runs on a free-tier Hugging Face Space, which spins down after a
+# few minutes of inactivity and then pays a 30-60s+ cold start on the next
+# request. This cron pings the lightweight /health endpoint every ~10 minutes so
+# the container stays warm for real users.
+#
+# Set the Space URL as a repo variable named HF_SPACE_URL
+# (Settings -> Secrets and variables -> Actions -> Variables). If unset, it
+# falls back to the default below — update it to match your Space.
+#   Example: https://saliksyedd-research-agent.hf.space
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"   # every 10 minutes (UTC)
+  workflow_dispatch: {}        # allow manual runs from the Actions tab
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping /health
+        env:
+          BASE_URL: ${{ vars.HF_SPACE_URL || 'https://saliksyedd-research-agent.hf.space' }}
+        run: |
+          echo "Pinging $BASE_URL/health"
+          code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 --retry 2 "$BASE_URL/health")
+          echo "HTTP $code"
+          # A cold Space may return 503 while booting; that's still a successful
+          # wake-up, so only fail on total unreachability (000).
+          if [ "$code" = "000" ]; then
+            echo "Space unreachable"
+            exit 1
+          fi

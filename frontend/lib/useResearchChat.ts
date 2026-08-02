@@ -141,7 +141,13 @@ export function useResearchChat() {
 
   const handleResponse = useCallback(
     (convId: string, res: ChatResponse) => {
-      if (res.status === "pending_review") {
+      if (res.status === "rate_limited") {
+        setError(
+          res.message ??
+            "The AI provider is rate-limited right now. Please wait a minute and try again."
+        );
+        setPhase("idle");
+      } else if (res.status === "pending_review") {
         setFindings(res.findings ?? "");
         setPhase("pending_review");
       } else {

@@ -26,7 +26,7 @@ from fastapi.responses import StreamingResponse
 # Load .env before importing the graph (which constructs the LLM client).
 load_dotenv()
 
-from main import build_graph  # noqa: E402
+from main import build_graph, _is_rate_limit  # noqa: E402
 from backend.schemas import (  # noqa: E402
     ChatRequest,
     ChatResponse,
@@ -69,6 +69,13 @@ def _to_text(value) -> str:
     if isinstance(value, list):
         return "\n\n".join(str(v) for v in value)
     return str(value or "")
+
+
+# Shown to the user when Groq's free-tier TPM budget is exhausted after retries.
+_RATE_LIMIT_MESSAGE = (
+    "The AI provider is rate-limited right now (free-tier token budget reached). "
+    "Please wait about a minute and try again."
+)
 
 
 def _status_from_state(thread_id: str) -> ChatResponse:
@@ -114,6 +121,10 @@ def chat(req: ChatRequest):
     try:
         graph.invoke(initial_state, config=_config(req.thread_id))
     except Exception as e:  # surface graph/LLM errors to the UI banner
+        # Rate limits are expected on the free tier: return a clear status the
+        # frontend can render as a real message instead of a hung spinner.
+        if _is_rate_limit(e):
+            return ChatResponse(status="rate_limited", message=_RATE_LIMIT_MESSAGE)
         raise HTTPException(status_code=500, detail=str(e))
     return _status_from_state(req.thread_id)
 
@@ -131,6 +142,8 @@ def resume(req: ResumeRequest):
     try:
         graph.invoke(None, cfg)
     except Exception as e:
+        if _is_rate_limit(e):
+            return ChatResponse(status="rate_limited", message=_RATE_LIMIT_MESSAGE)
         raise HTTPException(status_code=500, detail=str(e))
     return _status_from_state(req.thread_id)
 
@@ -167,7 +180,8 @@ def stream(thread_id: str):
                 yield _sse(cleaned[emitted:])
             yield "event: done\ndata: [DONE]\n\n"
         except Exception as e:
-            yield f"event: error\ndata: {str(e)[:300]}\n\n"
+            msg = _RATE_LIMIT_MESSAGE if _is_rate_limit(e) else str(e)[:300]
+            yield f"event: error\ndata: {msg}\n\n"
 
     return StreamingResponse(
         event_generator(),
@@ -214,5 +228,9 @@ def documents():
 
 
 @app.get("/api/health")
+@app.get("/health")
 def health():
+    # Lightweight liveness probe. Hit this from an external keep-alive (GitHub
+    # Actions cron / UptimeRobot) every ~10 min so the free-tier Space doesn't
+    # spin down and pay a 30-60s cold start on the next real request.
     return {"status": "ok"}

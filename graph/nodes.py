@@ -22,6 +22,38 @@ llm = ChatGroq(
     streaming=True,
 )
 
+# A cheap "judge" client for yes/no decisions (evaluate_context, evaluate).
+# These nodes only need one word, so we cap the output budget to a couple of
+# tokens: with `/no_think` in the prompt Qwen3 skips its reasoning block and
+# emits the answer directly. temperature=0 keeps the verdict deterministic, and
+# no streaming avoids the per-chunk overhead. This shaves the reserved output
+# tokens per judge call from 2048 to ~4 against the 6000 TPM budget.
+judge_llm = ChatGroq(
+    model="qwen/qwen3-32b",
+    max_tokens=4,
+    temperature=0.0,
+    streaming=False,
+)
+
+# --- Groq call accounting ----------------------------------------------------
+# Count every Groq round-trip so the per-query call count is verifiable from the
+# logs. load_documents (the first node of every query) resets the counter, so
+# the number printed after generate_report is the end-to-end total for that
+# query. See README / the latency notes for expected counts.
+_groq_calls = 0
+
+
+def _reset_groq_counter() -> None:
+    global _groq_calls
+    _groq_calls = 0
+    print("[groq] === new query: call counter reset ===", flush=True)
+
+
+def _log_groq_call(node: str) -> None:
+    global _groq_calls
+    _groq_calls += 1
+    print(f"[groq] call #{_groq_calls} (node={node})", flush=True)
+
 
 def _strip_think(text: str) -> str:
     """Remove Qwen3 <think>...</think> reasoning from an LLM response."""
@@ -95,6 +127,7 @@ Latest message: {state["query"]}
 
 Standalone question:"""
 
+    _log_groq_call("contextualize_query")
     response = llm.invoke(prompt)
     rewritten = _strip_think(response.content).strip().strip('"')
     if rewritten:
@@ -111,7 +144,8 @@ def evaluate_context(state: graph_schema):
     Ignore your prior knowledge and base your decision ONLY on whether the text above contains the answer.
     Answer only: yes or no /no_think
     """
-    response = llm.invoke(prompt)
+    _log_groq_call("evaluate_context")
+    response = judge_llm.invoke(prompt)
     is_sufficient = "yes" in _strip_think(response.content).lower()
 
     result = {"context_sufficient": is_sufficient}
@@ -126,6 +160,9 @@ def evaluate_context(state: graph_schema):
 
 def load_documents(state: graph_schema):
     from vectorstore.pinecone_store import is_index_empty, get_vectorstore
+
+    # First node of every query -> reset the per-query Groq call counter.
+    _reset_groq_counter()
 
     if is_index_empty():
         print("\n=== INGESTING PDFS TO PINECONE ===")
@@ -159,6 +196,7 @@ def summarize(state: graph_schema):
     Search Results:
     {_truncate(state.get("search_results", ""), 4000)}
     """
+    _log_groq_call("summarize")
     summary = llm.invoke(prompt)
     return {"summarized_result": _strip_think(summary.content)}
 
@@ -172,7 +210,8 @@ def evaluate(state: graph_schema):
     Are these findings sufficient for a detailed research report?
     Answer only: yes or no /no_think
     """
-    response = llm.invoke(prompt)
+    _log_groq_call("evaluate")
+    response = judge_llm.invoke(prompt)
     return {"is_sufficient": "yes" in _strip_think(response.content).lower()}
 
 
@@ -221,7 +260,9 @@ def generate_report(state: graph_schema):
     - Conclusion
     /no_think
     """
+    _log_groq_call("generate_report")
     report = llm.invoke(prompt)
+    print(f"[groq] query complete: {_groq_calls} Groq call(s) total", flush=True)
 
     return {"final_report": _strip_think(report.content)}
 

@@ -8,7 +8,7 @@ from typing import List, Literal, Optional
 
 from pydantic import BaseModel
 
-AgentStatus = Literal["pending_review", "ready_to_stream"]
+AgentStatus = Literal["pending_review", "ready_to_stream", "rate_limited"]
 
 
 class ChatRequest(BaseModel):
@@ -25,6 +25,8 @@ class ChatResponse(BaseModel):
     status: AgentStatus
     # Present when status == "pending_review": the findings to review.
     findings: Optional[str] = None
+    # Present when status == "rate_limited": a human-readable explanation.
+    message: Optional[str] = None
 
 
 class NewChatResponse(BaseModel):

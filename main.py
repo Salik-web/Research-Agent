@@ -39,13 +39,16 @@ def _is_rate_limit(exc: Exception) -> bool:
 
 
 # On the free tier the 6000 tokens-per-minute budget can be exhausted mid-query.
-# When that happens, wait for the TPM window to reset and retry the node rather
-# than crashing. Waits roughly: 15s, 30s, 60s, 70s, 70s.
+# When that happens, wait briefly and retry the node once rather than crashing.
+# Kept short on purpose: a long backoff (the old 6-attempt / ~4.5-min policy)
+# just makes the request hang behind an infinite spinner. With one retry the
+# worst case is a single ~5s wait per node; if it still fails, the error
+# propagates so the API can return a clear "rate_limited" status to the UI.
 LLM_RETRY = RetryPolicy(
-    initial_interval=15.0,
+    initial_interval=5.0,
     backoff_factor=2.0,
-    max_interval=70.0,
-    max_attempts=6,
+    max_interval=15.0,
+    max_attempts=2,
     jitter=True,
     retry_on=_is_rate_limit,
 )
