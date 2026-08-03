@@ -1,3 +1,14 @@
+---
+title: Research Agent
+emoji: 👀
+colorFrom: red
+colorTo: red
+sdk: docker
+app_port: 7860
+pinned: false
+license: mit
+---
+
 # Research Agent
 
 A full-stack Agentic RAG (Retrieval-Augmented Generation) application that researches any topic by combining your uploaded documents with live web search. It has a human-in-the-loop review step, real-time token streaming, and multi-conversation chat history — in a ChatGPT-style interface.
